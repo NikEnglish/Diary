@@ -5,6 +5,8 @@ function login() {
 
   database.ref('users').once('value', (snapshot) => {
     const users = snapshot.val();
+    let userFound = false;
+
     for (const key in users) {
       if (users[key].login === login && users[key].password === password) {
         localStorage.setItem('currentUser', JSON.stringify(users[key]));
@@ -13,9 +15,17 @@ function login() {
         } else if (users[key].role === 'teacher') {
           window.location.href = 'teacher.html';
         }
+        userFound = true;
         break;
       }
     }
+
+    if (!userFound) {
+      alert('Неверный логин или пароль!');
+    }
+  }).catch((error) => {
+    console.error('Ошибка при входе:', error);
+    alert('Ошибка при входе. Проверьте консоль для подробностей.');
   });
 }
 
