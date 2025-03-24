@@ -3,21 +3,237 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Электронный дневник</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #login-section, #teacher-section, #student-section {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    input, button, select {
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .grade-5 { color: green; }
+    .grade-4 { color: lime; }
+    .grade-3 { color: orange; }
+    .grade-2 { color: red; }
+    .grade-0 { color: red; }
+  </style>
 </head>
 <body>
+  <!-- Главная страница (вход) -->
   <div id="login-section">
-  <h1>Электронный дневник</h1>
-  <input type="text" id="login" placeholder="Логин">
-  <input type="password" id="password" placeholder="Пароль">
-  <button onclick="login()">Войти</button>
-  <!-- Блок для сообщений -->
-  <div id="message" style="margin-top: 20px; color: red;"></div>
+    <h1>Электронный дневник</h1>
+    <input type="text" id="login" placeholder="Логин">
+    <input type="password" id="password" placeholder="Пароль">
+    <button onclick="login()">Войти</button>
   </div>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
-     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
-     <script src="firebase-config.js"></script>
-     <script src="script.js"></script>
+
+  <!-- Страница учителя -->
+  <div id="teacher-section" class="hidden">
+    <h1>Добро пожаловать, <span id="teacher-name"></span></h1>
+    <div id="menu">
+      <button id="register-button" class="hidden" onclick="showRegisterForm()">Регистрация</button>
+      <button onclick="showGrades()">Выставление оценок</button>
+    </div>
+    <div id="register-form" class="hidden">
+      <!-- Форма регистрации -->
+    </div>
+  </div>
+
+  <!-- Страница ученика -->
+  <div id="student-section" class="hidden">
+    <h1>Добро пожаловать, <span id="student-name"></span></h1>
+    <div id="grades-table"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
+  <script>
+    // Конфигурация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBrnEn_0-kgZGps7rF_q-kGRNmlXjLhC9s",
+      authDomain: "electronic-diary-5a429.firebaseapp.com",
+      databaseURL: "https://electronic-diary-5a429-default-rtdb.firebaseio.com",
+      projectId: "electronic-diary-5a429"
+    };
+
+    // Инициализация Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Функция входа
+    function login() {
+      const login = document.getElementById('login').value;
+      const password = document.getElementById('password').value;
+
+      database.ref('users').once('value', (snapshot) => {
+        const users = snapshot.val();
+        let userFound = false;
+
+        for (const key in users) {
+          if (users[key].login === login && users[key].password === password) {
+            localStorage.setItem('currentUser', JSON.stringify(users[key]));
+            if (users[key].role === 'student') {
+              showStudentPage(users[key]);
+            } else if (users[key].role === 'teacher') {
+              showTeacherPage(users[key]);
+            }
+            userFound = true;
+            break;
+          }
+        }
+
+        if (!userFound) {
+          alert('Неверный логин или пароль!');
+        }
+      }).catch((error) => {
+        console.error('Ошибка при входе:', error);
+      });
+    }
+
+    // Показать страницу учителя
+    function showTeacherPage(teacher) {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('teacher-section').classList.remove('hidden');
+      document.getElementById('teacher-name').textContent = teacher.full_name;
+
+      if (teacher.can_register) {
+        document.getElementById('register-button').classList.remove('hidden');
+      }
+    }
+
+    // Показать страницу ученика
+    function showStudentPage(student) {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('student-section').classList.remove('hidden');
+      document.getElementById('student-name').textContent = student.full_name;
+      loadStudentGrades(student.login);
+    }
+
+    // Показать форму регистрации
+    function showRegisterForm() {
+      const form = `
+        <h2>Регистрация</h2>
+        <select id="role-select">
+          <option value="teacher">Учитель</option>
+          <option value="student">Ученик</option>
+        </select>
+        <input type="text" id="full-name" placeholder="ФИО">
+        <input type="text" id="new-login" placeholder="Логин">
+        <input type="password" id="new-password" placeholder="Пароль">
+        <div id="teacher-fields" class="hidden">
+          <select id="subject-select">
+            <option value="Математика">Математика</option>
+            <option value="Физика">Физика</option>
+          </select>
+          <label>
+            <input type="checkbox" id="can-register"> Может регистрировать
+          </label>
+        </div>
+        <div id="student-fields" class="hidden">
+          <input type="text" id="class" placeholder="Класс">
+          <input type="text" id="letter" placeholder="Буква класса">
+        </div>
+        <button onclick="register()">Зарегистрировать</button>
+      `;
+      document.getElementById('register-form').innerHTML = form;
+      document.getElementById('register-form').classList.remove('hidden');
+
+      document.getElementById('role-select').addEventListener('change', (e) => {
+        if (e.target.value === 'teacher') {
+          document.getElementById('teacher-fields').classList.remove('hidden');
+          document.getElementById('student-fields').classList.add('hidden');
+        } else {
+          document.getElementById('teacher-fields').classList.add('hidden');
+          document.getElementById('student-fields').classList.remove('hidden');
+        }
+      });
+    }
+
+    // Регистрация нового пользователя
+    function register() {
+      const role = document.getElementById('role-select').value;
+      const fullName = document.getElementById('full-name').value;
+      const login = document.getElementById('new-login').value;
+      const password = document.getElementById('new-password').value;
+
+      const userData = {
+        login,
+        password,
+        role,
+        full_name: fullName
+      };
+
+      if (role === 'teacher') {
+        userData.subject = document.getElementById('subject-select').value;
+        userData.can_register = document.getElementById('can-register').checked;
+      } else if (role === 'student') {
+        userData.class = document.getElementById('class').value;
+        userData.letter = document.getElementById('letter').value;
+      }
+
+      database.ref('users').push(userData);
+      alert('Регистрация успешна!');
+      document.getElementById('register-form').classList.add('hidden');
+    }
+
+    // Загрузка оценок ученика
+    function loadStudentGrades(studentLogin) {
+      database.ref(`grades/${studentLogin}`).once('value', (snapshot) => {
+        const grades = snapshot.val();
+        const table = document.getElementById('grades-table');
+        table.innerHTML = '<h2>Оценки</h2>';
+
+        for (const subject in grades) {
+          const subjectDiv = document.createElement('div');
+          subjectDiv.innerHTML = `<h3>${subject}</h3>`;
+          for (const quarter in grades[subject]) {
+            const quarterDiv = document.createElement('div');
+            quarterDiv.innerHTML = `<strong>${quarter}:</strong>`;
+            for (const date in grades[subject][quarter]) {
+              const gradesForDate = grades[subject][quarter][date];
+              quarterDiv.innerHTML += `<div>${date}: ${gradesForDate.join('/')}</div>`;
+            }
+            subjectDiv.appendChild(quarterDiv);
+          }
+          table.appendChild(subjectDiv);
+        }
+      });
+    }
+  </script>
 </body>
 </html>
