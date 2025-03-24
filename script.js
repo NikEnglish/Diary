@@ -2,6 +2,19 @@
 function login() {
   const login = document.getElementById('login').value;
   const password = document.getElementById('password').value;
+  const messageDiv = document.getElementById('message');
+
+  // Очищаем предыдущие сообщения
+  messageDiv.textContent = '';
+
+  // Проверяем, заполнены ли поля
+  if (!login || !password) {
+    messageDiv.textContent = 'Пожалуйста, заполните все поля.';
+    return;
+  }
+
+  // Пытаемся войти
+  messageDiv.textContent = 'Проверяем данные...';
 
   database.ref('users').once('value', (snapshot) => {
     const users = snapshot.val();
@@ -9,23 +22,27 @@ function login() {
 
     for (const key in users) {
       if (users[key].login === login && users[key].password === password) {
+        messageDiv.textContent = 'Вход выполнен! Перенаправляем...';
         localStorage.setItem('currentUser', JSON.stringify(users[key]));
+
+        // Перенаправляем на нужную страницу
         if (users[key].role === 'student') {
           window.location.href = 'student.html';
         } else if (users[key].role === 'teacher') {
           window.location.href = 'teacher.html';
         }
+
         userFound = true;
         break;
       }
     }
 
     if (!userFound) {
-      alert('Неверный логин или пароль!');
+      messageDiv.textContent = 'Неверный логин или пароль!';
     }
   }).catch((error) => {
-    console.error('Ошибка при входе:', error);
-    alert('Ошибка при входе. Проверьте консоль для подробностей.');
+    messageDiv.textContent = 'Ошибка при входе. Попробуйте ещё раз.';
+    console.error('Ошибка при входе:', error); // Если консоль станет доступна, это поможет
   });
 }
 
