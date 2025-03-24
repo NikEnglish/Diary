@@ -1,5 +1,5 @@
-// Функция входа
 function login() {
+  alert('Функция login вызвана'); // Проверка
   const login = document.getElementById('login').value;
   const password = document.getElementById('password').value;
 
