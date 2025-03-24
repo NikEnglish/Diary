@@ -2,27 +2,21 @@
 function login() {
   const login = document.getElementById('login').value;
   const password = document.getElementById('password').value;
-  const messageDiv = document.getElementById('message');
-
-  // Очищаем предыдущие сообщения
-  messageDiv.textContent = '';
 
   // Проверяем, заполнены ли поля
   if (!login || !password) {
-    messageDiv.textContent = 'Пожалуйста, заполните все поля.';
+    alert('Пожалуйста, заполните все поля.');
     return;
   }
 
   // Пытаемся войти
-  messageDiv.textContent = 'Проверяем данные...';
-
   database.ref('users').once('value', (snapshot) => {
     const users = snapshot.val();
     let userFound = false;
 
     for (const key in users) {
       if (users[key].login === login && users[key].password === password) {
-        messageDiv.textContent = 'Вход выполнен! Перенаправляем...';
+        alert('Вход выполнен! Перенаправляем...');
         localStorage.setItem('currentUser', JSON.stringify(users[key]));
 
         // Перенаправляем на нужную страницу
@@ -38,10 +32,10 @@ function login() {
     }
 
     if (!userFound) {
-      messageDiv.textContent = 'Неверный логин или пароль!';
+      alert('Неверный логин или пароль!');
     }
   }).catch((error) => {
-    messageDiv.textContent = 'Ошибка при входе. Попробуйте ещё раз.';
+    alert('Ошибка при входе. Попробуйте ещё раз.');
     console.error('Ошибка при входе:', error); // Если консоль станет доступна, это поможет
   });
 }
